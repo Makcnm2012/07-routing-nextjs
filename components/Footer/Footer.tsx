@@ -1,4 +1,4 @@
-import css from './Footer.module.css';
+import css from "./Footer.module.css";
 
 const Footer = () => {
   return (
@@ -6,7 +6,7 @@ const Footer = () => {
       <div className={css.content}>
         <p>© {new Date().getFullYear()} NoteHub. All rights reserved.</p>
         <div className={css.wrap}>
-          <p>Developer: Ruslan_T</p>
+          <p>Developer: Maksim_B</p>
           <p>
             Contact us:
             <a href="mailto:student@notehub.app">student@notehub.app</a>
