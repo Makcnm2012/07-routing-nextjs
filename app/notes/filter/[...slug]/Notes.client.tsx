@@ -1,81 +1,70 @@
-'use client';
+"use client";
 
-import { fetchNotes } from '@/lib/api';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import React, { useState } from 'react';
-import { useDebouncedCallback } from 'use-debounce';
-import css from './NotesPage.module.css';
-import SearchBox from '@/components/SearchBox/SearchBox';
-import Pagination from '@/components/Pagination/Pagination';
-import NoteList from '@/components/NoteList/NoteList';
-import Loader from '@/components/Loader/Loader';
-
-import Modal from '@/components/Modal/Modal';
-import NoteForm from '@/components/NoteForm/NoteForm';
-import Error from '../../error';
+import { useState } from "react";
+import css from "./Notes.module.css";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Pagination } from "@/components/Pagination/Pagination";
+import { useDebounce } from "use-debounce";
+import NoteList from "@/components/NoteList/NoteList";
+import { fetchNotes } from "@/lib/api";
+import { Modal } from "@/components/Modal/Modal";
+import NoteForm from "@/components/NoteForm/NoteForm";
+import { SearchBox } from "@/components/SearchBox/SearchBox";
 
 interface NotesClientProps {
-  tag?: string;
+  categoryId?: string;
 }
 
-const NotesClient = ({ tag }: NotesClientProps) => {
-  const [modalIsOpen, setModalIsOpen] = useState(false);
+function Notes({ categoryId }: NotesClientProps) {
+  const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [debouncedQuery] = useDebounce(query, 1000);
 
-  const { data, isSuccess, isLoading, isError, error } = useQuery({
-    queryKey: ['notes', page, search, tag],
-    queryFn: () => fetchNotes(page, search, tag),
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["notes", debouncedQuery, page, categoryId],
+    queryFn: () => fetchNotes(debouncedQuery, page, categoryId),
     placeholderData: keepPreviousData,
     refetchOnMount: false,
   });
-
-  const onPageChange = (page: number) => {
-    setPage(page);
-  };
-
-  const onOpenModal = () => {
-    setModalIsOpen(true);
-  };
-
-  const onCloseModal = () => {
-    setModalIsOpen(false);
-  };
-  const onChangeSearch = useDebouncedCallback((value: string) => {
-    setSearch(value);
+  console.log(data);
+  const handleSearchChange = (value: string) => {
+    setQuery(value);
     setPage(1);
-  }, 1000);
-
+  };
+  const totalPage = data?.totalPages || 0;
   return (
     <div className={css.app}>
-      <div className={css.toolbar}>
-        <SearchBox onChange={onChangeSearch} />
-        {data && data.totalPages > 1 && (
+      <header className={css.toolbar}>
+        <SearchBox value={query} onChange={handleSearchChange} />
+        {totalPage > 1 && (
           <Pagination
-            page={page}
-            totalPages={data.totalPages}
-            onChange={onPageChange}
+            totalPages={totalPage}
+            currentPage={page}
+            onPageChange={setPage}
           />
         )}
-        <button className={css.button} onClick={onOpenModal} type="button">
+
+        <button className={css.button} onClick={() => setIsModalOpen(true)}>
           Create note +
         </button>
-      </div>
-      {isLoading && !data && <Loader />}
-      {isError && error && <Error error={error as Error} />}
-      {isSuccess && data && data?.notes.length > 0 ? (
-        <NoteList notes={data.notes} />
-      ) : (
-        !isLoading && <p>Notes not found</p>
-      )}
+      </header>
+      {!isLoading &&
+        !isError &&
+        data &&
+        (data.notes.length > 0 ? (
+          <NoteList notes={data.notes} />
+        ) : (
+          <p className={css.empty}>No notes found 😕</p>
+        ))}
 
-      {modalIsOpen && (
-        <Modal closeModal={onCloseModal}>
-          <NoteForm closeModal={onCloseModal} />
+      {isModalOpen && (
+        <Modal onClose={() => setIsModalOpen(false)}>
+          <NoteForm onCancel={() => setIsModalOpen(false)} />
         </Modal>
       )}
     </div>
   );
-};
+}
 
-export default NotesClient;
+export default Notes;
